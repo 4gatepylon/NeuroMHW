@@ -18,14 +18,55 @@ CAT2GENDER = {1:'M','F':0}
 ETHNICITY2CAT = {'Han Chinese':0,'Bengali':1,'English':2}
 CAT2ETHNICITY = {0:'Han Chinese',1:'Bengali',2:'English'}
 
+# NOTE we may want to use something like Pytorch Lightning
+
+# Simple train function to run a single epoch of training
+def train1epoch(model, device, train_loader, optimizer):
+    model.train()
+
+    avg_loss = 0.0
+    num_batches = 0
+    for batch_idx, (data, target) in enumerate(train_loader):
+        data, target = data.to(device), target.to(device)
+        optimizer.zero_grad()
+        output = model(data)
+        loss = F.nll_loss(output, target)
+        loss.backward()
+        optimizer.step()
+        
+        avg_loss += torch.sum(loss).item()
+        num_batches += 1
+    
+    num_batches = max(float(num_batches), 1.0)
+    avg_loss /= num_batches
+    return avg_loss
+
+# Simple testing function (can be used every epoch, at the end, or whenever)
+def test(model, device, test_loader):
+    model.eval()
+    test_loss = 0
+    correct = 0
+    with torch.no_grad():
+        for data, target in test_loader:
+            data, target = data.to(device), target.to(device)
+            output = model(data)
+            test_loss += F.nll_loss(output, target, reduction='sum').item()  # sum up batch loss
+            pred = output.argmax(dim=1, keepdim=True)  # get the index of the max log-probability
+            correct += pred.eq(target.view_as(pred)).sum().item()
+
+    test_loss /= len(test_loader.dataset)
+    percent_correct = 100. * correct / len(test_loader.dataset)
+    
+    return test_loss, percent_correct
 
 class MemorylessWindowLogisticClassifier(nn.Module):
     # Do zero-padding on the window if necessary (populates from right
     # to left). Use the previous N elements to predict the next element.
-    def __init__(self, N=1, num_features=10):
+    def __init__(self, N=5, num_features=10):
         self.N = N
         self.num_features = num_features
 
+    # TODO we may want to prune for optimization here
     def forward(self, x):
         return F.sigmoid(self.lin(x))
 
