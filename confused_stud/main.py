@@ -1,3 +1,4 @@
+from tkinter.tix import Y_REGION
 import numpy as np
 import os
 import time
@@ -70,6 +71,14 @@ class MemorylessWindowLogisticClassifier(nn.Module):
     # TODO we may want to prune for optimization here
     def forward(self, x):
         return F.sigmoid(self.lin(x))
+
+def run_experiment(X_train, Y_train,
+        X_ptest, Y_ptest,
+        X_vtest, Y_vtest, 
+        USER_TRAIN_BATCH_SIZE, VIDEO_TRAIN_BATCH_SIZE,
+        USER_TEST_BATCH_SIZE, VIDEO_TEST_BATCH_SIZE):
+    # TODO
+    raise NotImplementedError
 
 VERBOSE = False
 def main():
@@ -226,13 +235,36 @@ def main():
 
     # Out of distribution VIDEO test (with IN-distribution people)
     X_vtest, Y_vtest = X[:-1, -1:, :, :], Y[:-1, -1:, :, :]
+
+    # Sanity check the shapes
+    assert tuple(X_train.shape[:-1]) == tuple(Y_train.shape[:-1])
+    assert tuple(X_ptest.shape[:-1]) == tuple(Y_ptest.shape[:-1])
+    assert tuple(X_vtest.shape[:-1]) == tuple(Y_vtest.shape[:-1])
+
     print("X_train, Y_train ~ {}, {}".format(X_train.shape, Y_train.shape))
     print("X_ptest, Y_ptest ~ {}, {}".format(X_ptest.shape, Y_ptest.shape))
     print("X_vtest, Y_vtest ~ {}, {}".format(X_vtest.shape, Y_vtest.shape))
 
     # NOTE that at this point we have TIME space data and we MIGHT WANT FREQUENCY SPACE data, though we can decide later
-    
 
+    USER_TRAIN_BATCH_SIZE = 3
+    VIDEO_TRAIN_BATCH_SIZE = 3
+    USER_TEST_BATCH_SIZE = 1
+    VIDEO_TEST_BATCH_SIZE = 1
+    assert USER_TRAIN_BATCH_SIZE <= X_train.shape[0]
+    assert VIDEO_TRAIN_BATCH_SIZE <= X_train.shape[1]
+    assert USER_TEST_BATCH_SIZE <= X_ptest.shape[0]
+    assert VIDEO_TEST_BATCH_SIZE <= X_vtest.shape[1]
+
+    # NOTE the run_Experiment function is really just an extension of main to make this more readable. It will
+    # take in the data and then train and test based on the train/test data we give using a model which it will create.
+    run_experiment(X_train, Y_train,
+        X_ptest, Y_ptest,
+        # NOTE we may not have vtest if we decide to do only a single task for the demo!
+        X_vtest, Y_vtest, 
+        USER_TRAIN_BATCH_SIZE, VIDEO_TRAIN_BATCH_SIZE,
+        # NOTE these video tests (which correspond really to task batch size), may not be used later
+        USER_TEST_BATCH_SIZE, VIDEO_TEST_BATCH_SIZE)
 
 if __name__ == "__main__":
     main()
